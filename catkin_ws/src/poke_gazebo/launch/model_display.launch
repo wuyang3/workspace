@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<launch>
+
+  <arg name="paused" default="true"/>
+  <arg name="gui" default="true"/>
+  <arg name="use_sim_time" default="true"/>
+  <arg name="headless" default="false"/>
+  <arg name="debug" default="false"/>
+  <arg name="load_robot_description" default="true"/>
+
+  <param name="block" textfile="$(find poke_gazebo)/models/block/block.urdf"/>
+  <param name="block_purple" textfile="$(find poke_gazebo)/models/block/block_purple.urdf"/>
+  <param name="block_yellow" textfile="$(find poke_gazebo)/models/block/block_yellow.urdf"/>
+  <param name="block_turquoise" textfile="$(find poke_gazebo)/models/block/block_turquoise.urdf"/>
+  <param name="block_l_1" textfile="$(find poke_gazebo)/models/block/block_l_1.urdf"/>
+  <param name="block_l_2" textfile="$(find poke_gazebo)/models/block/block_l_2.urdf"/>
+  <param name="block_l_3" textfile="$(find poke_gazebo)/models/block/block_l_3.urdf"/>
+  <param name="block_l_4" textfile="$(find poke_gazebo)/models/block/block_l_4.urdf"/>
+  <param name="cylinder_1" textfile="$(find poke_gazebo)/models/block/cylinder_1.urdf"/>
+  <param name="cylinder_2" textfile="$(find poke_gazebo)/models/block/cylinder_2.urdf"/>
+  <param name="cylinder_3" textfile="$(find poke_gazebo)/models/block/cylinder_3.urdf"/>
+  <param name="cylinder_4" textfile="$(find poke_gazebo)/models/block/cylinder_4.urdf"/>
+  <param name="cylinder_5" textfile="$(find poke_gazebo)/models/block/cylinder_5.urdf"/>
+  <param name="table" textfile="$(find poke_gazebo)/models/cafe_table/model.sdf"/>
+  <param name="table_1" textfile="$(find poke_gazebo)/models/table_1/model.sdf"/>
+  <param name="table_2" textfile="$(find poke_gazebo)/models/table_2/model.sdf"/>
+  <param name="table_3" textfile="$(find poke_gazebo)/models/table_3/model.sdf"/>
+  <param name="table_4" textfile="$(find poke_gazebo)/models/table_4/model.sdf"/>
+  <param name="table_5" textfile="$(find poke_gazebo)/models/table_5/model.sdf"/>
+  <param name="table_6" textfile="$(find poke_gazebo)/models/table_6/model.sdf"/>
+  <param name="robot_description"
+    command="$(find xacro)/xacro.py --inorder $(find poke_description)/urdf/my_gripper.urdf.xacro gazebo:=true"/>
+
+  <!-- inherit the logic in empty_world.launch -->
+  <include file="$(find gazebo_ros)/launch/empty_world.launch">
+    <arg name="world_name" value="$(find poke_gazebo)/worlds/poke.world"/>
+    <arg name="debug" value="$(arg debug)" />
+    <arg name="gui" value="$(arg gui)" />
+    <arg name="paused" value="$(arg paused)"/>
+    <arg name="use_sim_time" value="$(arg use_sim_time)"/>
+    <arg name="headless" value="$(arg headless)"/>
+  </include>
+
+  <!-- spawn the gripper into gazebo-->
+  <node name="spawn_urdf" pkg="gazebo_ros" type="spawn_model" respawn="false" output="screen" args="-param robot_description -urdf -x 0 -y -0.04 -z 0 -model my_gripper"/>
+
+  <node name="spawn_table" pkg="gazebo_ros" type="spawn_model" respawn="false" output="screen" args="-param table -sdf -x 0.4 -y 0.43 -z 0 -model cafe_table"/>
+  <node name="spawn_table_1" pkg="gazebo_ros" type="spawn_model" respawn="false" output="screen" args="-param table_1 -sdf -x 0.4 -y 2.03 -z 0 -model table_1"/>
+  <node name="spawn_table_2" pkg="gazebo_ros" type="spawn_model" respawn="false" output="screen" args="-param table_2 -sdf -x 2.0 -y 0.43 -z 0 -model table_2"/>
+  <node name="spawn_table_3" pkg="gazebo_ros" type="spawn_model" respawn="false" output="screen" args="-param table_3 -sdf -x 2.0 -y 2.03 -z 0 -model table_3"/>
+  <node name="spawn_table_4" pkg="gazebo_ros" type="spawn_model" respawn="false" output="screen" args="-param table_4 -sdf -x 3.5 -y 0.43 -z 0 -model table_4"/>
+  <node name="spawn_table_5" pkg="gazebo_ros" type="spawn_model" respawn="false" output="screen" args="-param table_5 -sdf -x 3.5 -y 2.03 -z 0 -model table_5"/>
+  <node name="spawn_table_6" pkg="gazebo_ros" type="spawn_model" respawn="false" output="screen" args="-param table_6 -sdf -x 5.0 -y 0.43 -z 0 -model table_6"/>
+
+  <node name="spawn_block" pkg="gazebo_ros" type="spawn_model" respawn="false" output="screen" args="-param block -urdf -x 0.4 -y 0.43 -z 0.815 -model block"/>
+  <node name="spawn_block1" pkg="gazebo_ros" type="spawn_model" respawn="false" output="screen" args="-param block_purple -urdf -x 0.1 -y 0.23 -z 0.815 -model block1"/>
+  <node name="spawn_block2" pkg="gazebo_ros" type="spawn_model" respawn="false" output="screen" args="-param block_yellow -urdf -x 0.1 -y 0.43 -z 0.815 -model block2"/>
+  <node name="spawn_block3" pkg="gazebo_ros" type="spawn_model" respawn="false" output="screen" args="-param block_turquoise -urdf -x 0.1 -y 0.63 -z 0.815 -model block3"/>
+
+  <!--node name="spawn_block_1" pkg="gazebo_ros" type="spawn_model" respawn="false" output="screen" args="-param block_l_1 -urdf -x 0.25 -y 0.25 -z 0.815 -model block_l_1"/>
+  <node name="spawn_block_2" pkg="gazebo_ros" type="spawn_model" respawn="false" output="screen" args="-param block_l_2 -urdf -x 0.05 -y 0.08 -z 0.815 -model block_l_2"/>
+  <node name="spawn_block_3" pkg="gazebo_ros" type="spawn_model" respawn="false" output="screen" args="-param block_l_3 -urdf -x 0.05 -y 0.45 -z 0.815 -model block_l_3"/>
+  <node name="spawn_block_4" pkg="gazebo_ros" type="spawn_model" respawn="false" output="screen" args="-param block_l_4 -urdf -x 0.05 -y 0.74 -z 0.815 -model block_l_4"/>
+  <node name="spawn_cylinder_1" pkg="gazebo_ros" type="spawn_model" respawn="false" output="screen" args="-param cylinder_1 -urdf -x 0.55 -y 0.3 -z 0.815 -model cylinder_1"/>
+  <node name="spawn_cylinder_2" pkg="gazebo_ros" type="spawn_model" respawn="false" output="screen" args="-param cylinder_2 -urdf -x 0.55 -y 0.25 -z 0.815 -model cylinder_2"/>
+  <node name="spawn_cylinder_3" pkg="gazebo_ros" type="spawn_model" respawn="false" output="screen" args="-param cylinder_3 -urdf -x 0.55 -y 0.4 -z 0.815 -model cylinder_3"/>
+  <node name="spawn_cylinder_4" pkg="gazebo_ros" type="spawn_model" respawn="false" output="screen" args="-param cylinder_4 -urdf -x 0.55 -y 0.55 -z 0.815 -model cylinder_4"/>
+  <node name="spawn_cylinder_5" pkg="gazebo_ros" type="spawn_model" respawn="false" output="screen" args="-param cylinder_5 -urdf -x 0.55 -y 0.7 -z 0.815 -model cylinder_5"/-->
+
+  <!--include file="$(find poke_control)/launch/poke_control.launch"/>
+  <node name="camera_tf_broadcaster" pkg="tf" type="static_transform_publisher" args="0.26 0.43 1.22 0 2.9670597283903604 0 world camera1 20" />
+  <node name="model_tf_broadcaster" pkg="poke_gazebo" type="poke_model_broadcaster.py" respawn="false" output="screen">
+    <param name="model_name" type="string" value="block" />
+  </node>
+  <node name="poke_tf_listener" pkg="poke_gazebo" type="poke_tf_listener.py"/>
+  <node name="model_image_projection" pkg="poke_gazebo" type="poke_image_projection.py" />
+  <node name="model_image_saver" pkg="poke_gazebo" type="poke_image_saver.py" />
+  <node name="model_world_projection" pkg="poke_gazebo" type="poke_world_projection.py" />
+  <node name="model_action_generation" pkg="poke_gazebo" type="poke_action_generation.py" /-->
+</launch>

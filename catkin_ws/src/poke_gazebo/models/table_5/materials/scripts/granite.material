@@ -1,0 +1,16 @@
+material vrc/granite
+{
+	receive_shadows off
+	technique
+	{
+		pass
+		{
+			texture_unit
+			{
+				texture granite_2.jpeg
+				filtering anistropic
+				max_anisotropy 16
+			}
+		}
+	}
+}

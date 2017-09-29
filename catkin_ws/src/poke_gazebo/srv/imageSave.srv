@@ -1,0 +1,5 @@
+# service type for saving image.
+string path
+int64 number
+---
+bool success

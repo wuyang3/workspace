@@ -1,0 +1,5 @@
+# service type for pose/point transform
+geometry_msgs/PointStamped pointIn
+string targetFrame
+---
+geometry_msgs/PointStamped pointOut

@@ -1,0 +1,16 @@
+material vrc/hardwood
+{
+	receive_shadows off
+	technique
+	{
+		pass
+		{
+			texture_unit
+			{
+				texture wood_text.jpg
+				filtering anistropic
+				max_anisotropy 16
+			}
+		}
+	}
+}

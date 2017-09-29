@@ -1,0 +1,39 @@
+  <gazebo reference="my_camera_link">
+    <material>Gazebo/Black</material>
+    <sensor type="camera" name="camera1">
+      <update_rate>5.0</update_rate>
+      <camera name="head">
+        <horizontal_fov>1.570796327</horizontal_fov>
+        <!--1.3962634 field of view changed to 90 degree -->
+        <image>
+          <width>240</width>
+          <height>240</height>
+          <format>R8G8B8</format>
+        </image>
+        <clip>
+          <near>0.02</near>
+          <far>300</far>
+        </clip>
+        <noise>
+          <type>gaussian</type>
+          <mean>0.0</mean>
+          <stddev>0.007</stddev>
+        </noise>
+      </camera>
+      <plugin name="camera_controller" filename="libgazebo_ros_camera.so">
+        <alwaysOn>true</alwaysOn>
+        <updateRate>0.0</updateRate>
+        <cameraName>my_gripper/camera1</cameraName>
+        <imageTopicName>image_raw</imageTopicName>
+        <cameraInfoTopicName>camera_info</cameraInfoTopicName>
+        <!--This is the coordinate frame the image is published under in tf tree-->
+        <frameName>my_camera_link</frameName>
+        <hackBaseline>0.07</hackBaseline>
+        <distortionK1>0.0</distortionK1>
+        <distortionK2>0.0</distortionK2>
+        <distortionK3>0.0</distortionK3>
+        <distortionT1>0.0</distortionT1>
+        <distortionT2>0.0</distortionT2>
+      </plugin>
+    </sensor>
+  </gazebo>

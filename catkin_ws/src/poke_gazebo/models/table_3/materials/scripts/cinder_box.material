@@ -1,0 +1,17 @@
+material CinderBox/Diffuse
+{
+  receive_shadows off
+  technique
+  {
+    pass
+    {
+      texture_unit
+      {
+        texture grey_quartz.jpg
+        filtering anistropic
+        max_anisotropy 16
+      }
+    }
+  }
+}
+

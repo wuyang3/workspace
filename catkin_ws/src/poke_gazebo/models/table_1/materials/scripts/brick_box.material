@@ -1,0 +1,17 @@
+material BrickBox/Diffuse
+{
+  receive_shadows off
+  technique
+  {
+    pass
+    {
+      texture_unit
+      {
+        texture Wood_floor.jpg
+        filtering anistropic
+        max_anisotropy 16
+      }
+    }
+  }
+}
+

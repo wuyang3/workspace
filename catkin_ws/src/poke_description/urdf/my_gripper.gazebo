@@ -1,0 +1,78 @@
+<?xml version="1.0"?>
+<robot>
+
+  <!-- ros_control plugin-->
+  <!-- Remember, the control manager will be namespaced to /my_gripper/controller_manager. In the meantime, the spawner is also  specified to work in namespace /my_grippper. The arguements joint1_position_controller, joint2_position_controller etc are already in namespace my_gripper as notified in yaml. Then the controllers can find the controller_manager interface -->
+  <gazebo>
+    <plugin name="gazebo_ros_control" filename="libgazebo_ros_control.so">
+      <robotNamespace>/my_gripper</robotNamespace>
+      <robotSimType>gazebo_ros_control/DefaultRobotHWSim</robotSimType>
+    </plugin>
+  </gazebo>
+  <!-- Link1 -->
+  <gazebo reference="link1">
+    <material>Gazebo/Orange</material>
+  </gazebo>
+  <!-- Link2 -->
+  <gazebo reference="link2">
+    <material>Gazebo/Black</material>
+  </gazebo>
+  <!-- Link3 -->
+  <gazebo reference="link3">
+    <material>Gazebo/Orange</material>
+  </gazebo>
+
+  <gazebo reference="my_camera_link">
+    <material>Gazebo/Black</material>
+    <sensor type="depth" name="camera1">
+      <update_rate>30.0</update_rate>
+      <camera name="head">
+        <horizontal_fov>1.570796327</horizontal_fov>
+        <!--1.3962634 field of view changed to 90 degree -->
+        <image>
+          <width>240</width>
+          <height>240</height>
+          <format>R8G8B8</format>
+        </image>
+        <clip>
+          <near>0.02</near>
+          <far>30</far>
+        </clip>
+        <noise>
+          <type>gaussian</type>
+          <mean>0.0</mean>
+          <stddev>0.007</stddev>
+        </noise>
+      </camera>
+      <plugin name="camera_controller" filename="libgazebo_ros_openni_kinect.so">
+        <alwaysOn>true</alwaysOn>
+        <updateRate>30.0</updateRate>
+        <cameraName>my_gripper/camera1</cameraName>
+        <imageTopicName>rgb/image_raw</imageTopicName>
+        <cameraInfoTopicName>rgb/camera_info</cameraInfoTopicName>
+        <depthImageTopicName>depth/image_raw</depthImageTopicName>
+        <depthImageCameraInfoTopicName>depth/camera_info</depthImageCameraInfoTopicName>
+        <pointCloudTopicName>depth/points</pointCloudTopicName>
+        <frameName>my_camera_link</frameName>
+        <pointCloudCutoff>0.2</pointCloudCutoff>
+        <!--what is hackBaseline? use this changes P, previous value is 0.07-->
+        <hackBaseline>0.0</hackBaseline>
+        <distortionK1>0.0</distortionK1>
+        <distortionK2>0.0</distortionK2>
+        <distortionK3>0.0</distortionK3>
+        <distortionT1>0.0</distortionT1>
+        <distortionT2>0.0</distortionT2>
+      </plugin>
+    </sensor>
+  </gazebo>
+
+  <gazebo reference="joint1">
+    <implicitSpringDamper>1</implicitSpringDamper>
+  </gazebo>
+  <gazebo reference="joint2">
+    <implicitSpringDamper>1</implicitSpringDamper>
+  </gazebo>
+  <gazebo reference="joint3">
+    <implicitSpringDamper>1</implicitSpringDamper>
+  </gazebo>
+</robot>
