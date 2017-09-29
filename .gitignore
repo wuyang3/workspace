@@ -43,13 +43,6 @@ Thumbs.db
 # emacs #
 **/*~
 
-# Images #
-*.jpg
-*.gif
-*.png
-*.svg
-*.ico
-
 # Specifics #
 catkin_ws/build
 catkin_ws/devel
@@ -57,3 +50,4 @@ catkin_ws/src/poke_gazebo/data/run*
 python/poke/t*
 python/poke/*.txt
 python/tf/logs
+catkin_ws/src/moveit_robots/baxter/baxter_moveit_config/default_warehouse_mongo_db
