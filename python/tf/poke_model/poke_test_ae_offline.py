@@ -10,9 +10,13 @@ import numpy as np
 import math
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
+import matplotlib as mpl
+mpl.rcParams.update({'font.size': 22})
+
 from poke_autoencoder import PokeAE
 from poke_vae import PokeVAE
 from poke_bn_vae import PokeBnVAE
+
 from poke_ae_rnn import PokeAERNN, PokeVAERNN, PokeAEFFRNN, PokeVAERNNC
 from poke_ae_rnn_multi import PokeMultiRNN # inheritate from PokeVAERNN.
 
@@ -37,26 +41,34 @@ def plot_multisample(imgs, imgs_rec, actions, positions, title, plot_start=False
     actions: list of backprop_step-1 actions (each as a list).
     positions: list of backprop_step positions (each as a list of x and y).
     title: a string.
+
+    3 steps big: (15, 10) bottom top (0.1, 0.9)
+    3 steps small: (7.5, 5) bottom top (0.1, 0.9)
+    6 steps: (15, 5) bottom top (0.08, 1)
     """
     num = len(imgs)
     assert (num == len(actions)+1 and num==len(imgs_rec)), (
         'number of images or actions are not matching.'
     )
-    fig, axarr = plt.subplots(2, num, figsize=(16, 8))
+    fig, axarr = plt.subplots(2, num, figsize=(7.5, 5))
+    label_list = ['$t_0$']+['$t_0+%i$'%i for i in range(1, num)]
     for i, ax in enumerate(axarr[0]):
         im = imgs[i][0]
         im = im/255.0
         p_x, p_y = center_to_corner(positions[i])
         ax.imshow(im)
+        plt.setp(ax.get_xticklabels(), visible=False)
+        plt.setp(ax.get_yticklabels(), visible=False)
+        ax.tick_params(axis='both', which='both', length=0)
         if i==0:
             ax.add_patch(patches.Rectangle(
-                (64.0-p_y, p_x), win_height, win_width, edgecolor='b', fill=False))
+                (64.0-p_y, p_x), win_height, win_width, edgecolor='b', linewidth=2.0, fill=False))
         else:
             p_x0, p_y0 = center_to_corner(positions[i-1])
             ax.add_patch(patches.Rectangle(
-                (64.0-p_y0, p_x0), win_height, win_width, edgecolor='b', fill=False))
+                (64.0-p_y0, p_x0), win_height, win_width, edgecolor='b', linewidth=2.0, fill=False))
             ax.add_patch(patches.Rectangle(
-                (64.0-p_y, p_x), win_height, win_width, edgecolor='r', fill=False))
+                (64.0-p_y, p_x), win_height, win_width, edgecolor='r', linewidth=2.0, fill=False))
 
         if i < num-1:
             rect(ax, actions[i], "green")
@@ -65,23 +77,27 @@ def plot_multisample(imgs, imgs_rec, actions, positions, title, plot_start=False
         im = im/im.max()
         p_x, p_y = center_to_corner(positions[i])
         ax.imshow(im)
+        plt.setp(ax.get_xticklabels(), visible=False)
+        plt.setp(ax.get_yticklabels(), visible=False)
+        ax.tick_params(axis='both', which='both', length=0)
+        ax.set_xlabel(label_list[i])
         if i==0:
             if plot_start:
                 p_xs = p_x
                 p_ys = p_y
             ax.add_patch(patches.Rectangle(
-                (64.0-p_y, p_x), win_height, win_width, edgecolor='b', fill=False))
+                (64.0-p_y, p_x), win_height, win_width, edgecolor='b', linewidth=2.0, fill=False))
         else:
             if plot_start:
                 ax.add_patch(patches.Rectangle(
                     (64.0-p_ys, p_xs), win_height, win_width, edgecolor='k', linewidth=2.0, fill=False))
             p_x0, p_y0 = center_to_corner(positions[i-1])
             ax.add_patch(patches.Rectangle(
-                (64.0-p_y0, p_x0), win_height, win_width, edgecolor='b', fill=False))
+                (64.0-p_y0, p_x0), win_height, win_width, edgecolor='b', linewidth=2.0, fill=False))
             ax.add_patch(patches.Rectangle(
-                (64.0-p_y, p_x), win_height, win_width, edgecolor='r', fill=False))
-
-    fig.suptitle('%s'%title)
+                (64.0-p_y, p_x), win_height, win_width, edgecolor='r', linewidth=2.0, fill=False))
+    plt.subplots_adjust(wspace=0, hspace=0, left=0, right=1, bottom=0.1, top=0.9)
+    #fig.suptitle('%s'%title)
 
 def read_data_list_rnn_test(data_list, num_epochs, shuffle):
     assert type(shuffle)==bool, (
@@ -205,7 +221,7 @@ def ae_rnn_test():
     path = '/home/wuyang/workspace/python/poke/test_data/'
 
     input_queue = read_data_list_rnn_test(
-        '../../poke/test_cube_3.txt', num_epochs, shuffle)
+        '../../poke/test_cube_table_3.txt', num_epochs, shuffle)
     images_1, images_2, images_3, u1s, u2s, p1s, p2s, p3s = batch_images_actions_rnn_test(
         input_queue, batch_size, num_threads, min_after_dequeue,
         type_img=type_img, normalized=normalized)
@@ -215,7 +231,7 @@ def ae_rnn_test():
         #poke_ae = PokeAERNN(batch_size=batch_size, split_size=512,
         #                    in_channels=3, corrupted=0,
         #                    is_training=False, lstm=1)
-        poke_ae = PokeVAERNN(batch_size=batch_size, split_size=128, in_channels=3, corrupted=0,
+        poke_ae = PokeVAERNN(batch_size=batch_size, split_size=512, in_channels=3, corrupted=0,
                              is_training=False, lstm=1)
         #poke_ae = PokeAEFFRNN(batch_size=batch_size, in_channels=3,
         #                      corrupted=0, is_training=False, lstm=1, vae=1)
@@ -225,11 +241,13 @@ def ae_rnn_test():
         #restore_path = '../logs/pokeAERNN/lstm_dae(bn)/'
         #restore_path = '../logs/pokeAERNN/rnn_vae/'
         #restore_path = '../logs/pokeAERNN/lstm_vae/'
-        restore_path = '../logs/pokeAERNN/lstm_vae_little/'
+        #restore_path = '../logs/pokeAERNN/lstm_vae_little/'
 
         #restore_path = '../logs/pokeAERNN/ff_rnn_dae(bn)/'
         #restore_path = '../logs/pokeAERNN/ff_lstm_dae(bn)/'
         #restore_path = '../logs/pokeAERNN/ff_lstm_vae/'
+
+        restore_path = '../logs/pokeAERNN_new/lstm_vae_14/'
 
         saver.restore(sess, tf.train.latest_checkpoint(restore_path))
         tf.local_variables_initializer().run()
@@ -270,17 +288,17 @@ def ae_rnn_test():
                         imgs_feed[n], imgs_rec[n], win_height, win_width, px/240.0, 1-py/240.0)
                     mean_error = sess.run(mean_error_t)
                     errors.append(mean_error)
-                title_l = ['Error %d: %.2f'%(n, item) for n, item in enumerate(errors)]
+                title_l = ['Error %d: %.2f;'%(n, item) for n, item in enumerate(errors)]
                 title = ' '.join(title_l)
 
-                # plot_multisample(imgs_feed, imgs_rec, actions_plot, positions_plot, title)
-                # plt.pause(0.5)
-                # plt.savefig(path+'rnn%d.png'%step, format='png', dpi=600)
-                # plt.waitforbuttonpress()
-                # plt.close()
+                plot_multisample(imgs_feed, imgs_rec, actions_plot, positions_plot, title)
+                #plt.pause(0.5)
+                #plt.waitforbuttonpress()
+                plt.savefig(path+'rnn%d.png'%step, format='png', dpi=600)
+                plt.close()
 
-                with open(path+'error_rnn_offline.dat', 'ab') as f:
-                    np.savetxt(f, np.array([errors]))
+                #with open(path+'error_rnn_offline.dat', 'ab') as f:
+                #    np.savetxt(f, np.array([errors]))
 
                 step+=1
             train_writer.close()
@@ -362,10 +380,10 @@ def ae_rnn_sample():
                 half_decoding_list = []
 
                 # option 1: sampling from mean and logss.
-                #temp_iden = tf.zeros_like(poke_ae.identity)
-                #fake_sampling, _, _ = poke_ae.hidden_sample(temp_iden, poke_ae.transit_series)
-                temp_trans = [tf.zeros_like(item) for item in poke_ae.transit_series]
-                fake_sampling, _, _ = poke_ae.hidden_sample(poke_ae.identity, temp_trans)
+                temp_iden = tf.zeros_like(poke_ae.identity)
+                fake_sampling, _, _ = poke_ae.hidden_sample(temp_iden, poke_ae.transit_series)
+                #temp_trans = [tf.zeros_like(item) for item in poke_ae.transit_series]
+                #fake_sampling, _, _ = poke_ae.hidden_sample(poke_ae.identity, temp_trans)
                 iden_string += '(%.2f, %.2f)'%(np.mean(mean[0]), np.mean(logss[0]))
                 for i, item in enumerate(zip(mean[1:], logss[1:])):
                     temp_mean, temp_logss = item
@@ -393,9 +411,9 @@ def ae_rnn_sample():
                 plot_multisample(imgs_feed, half_decoding, #imgs_rec,
                                  actions_plot, positions_plot, title,
                                  plot_start=True)
-                plt.pause(0.5)
-                plt.savefig(path+'zero_trans_%d.png'%step, format='png', dpi=600)
-                plt.waitforbuttonpress()
+                #plt.pause(0.5)
+                plt.savefig(path+'zero_iden_%d.png'%step, format='png', dpi=600)
+                #plt.waitforbuttonpress()
                 plt.close()
 
                 step+=1
@@ -578,7 +596,7 @@ def ae_rnn_multi_test(bp_steps):
     path = '/home/wuyang/workspace/python/poke/test_data/'
 
     input_queue = read_data_list_multi_test(
-        '../../poke/test_multi_cube_6.txt', num_epochs, shuffle, bp_steps)
+        '../../poke/test_multi_cube_table_6.txt', num_epochs, shuffle, bp_steps)
     images, actions, positions = batch_images_actions_multi_test(
         input_queue, batch_size, num_threads, min_after_dequeue, bp_steps, target_size=64,
         type_img=type_img, normalized=0)
@@ -590,7 +608,10 @@ def ae_rnn_multi_test(bp_steps):
                                is_training=False, bp_steps=bp_steps)
 
         saver = tf.train.Saver(max_to_keep=2)
-        saver.restore(sess, tf.train.latest_checkpoint('../logs/pokeAERNN/6_lstm_vae_8ep/'))
+
+        #restore_path = '../logs/pokeAERNN/6_lstm_vae_8ep/'
+        restore_path = '../logs/pokeAERNN_new/6_lstm_vae_12/'
+        saver.restore(sess, tf.train.latest_checkpoint(restore_path))
         tf.local_variables_initializer().run()
 
         coord = tf.train.Coordinator()
@@ -628,15 +649,16 @@ def ae_rnn_multi_test(bp_steps):
                 title_l = ['Error %d: %.2f'%(n, item) for n, item in enumerate(errors)]
                 title = ' '.join(title_l)
 
-                plot_multisample(imgs_list, imgs_rec, actions_plot, positions_plot, title)
-                plt.pause(0.5)
-                plt.savefig(path+'rnn%d.png'%step, format='png', dpi=600)
-                plt.waitforbuttonpress()
-                plt.close()
+                #plot_multisample(imgs_list, imgs_rec, actions_plot, positions_plot, title)
+                #plt.pause(0.5)
+                #plt.savefig(path+'rnn%d.png'%step, format='png', dpi=600)
+                #plt.waitforbuttonpress()
+                #plt.close()
 
-                #with open(path+'error_multi_rnn_off.dat', 'ab') as f:
-                #    np.savetxt(f, np.array([errors]))
+                with open(path+'error_multi_rnn_off.dat', 'ab') as f:
+                    np.savetxt(f, np.array([errors]))
 
+                print step
                 step+=1
 
             train_writer.close()
@@ -652,5 +674,6 @@ def ae_rnn_multi_test(bp_steps):
 if __name__ == '__main__':
     #ae_rnn_test()
     #ae_rnn_multi_test(6)
+
     ae_rnn_sample()
     #ae_rnn_sanity_check()

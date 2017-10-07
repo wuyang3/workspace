@@ -7,7 +7,35 @@ Seaborn supports grouped boxplo but requires pandas data frame.
 #plt.show()
 """
 import numpy as np
+import matplotlib as mpl
 import matplotlib.pyplot as plt
+#plt.style.use(['seaborn', 'presentation']) # for loss plots
+mpl.rcParams.update({'font.size': 24}) # for boxplots
+import pandas as pd
+import seaborn as sns
+
+def get_loss(paths, labels):
+    fig, ax = plt.subplots(figsize=(7.5, 5))
+    colors = ['m', 'b', 'g', 'r']
+    df_list = []
+    for i, path in enumerate(paths):
+        df_temp = pd.read_csv(path)
+        df_temp.rename(columns = {'Value':'Loss'}, inplace = True)
+        length = df_temp.shape[0]
+        label_col = [labels[i] for j in range(length)]
+        df_temp['labels'] = label_col
+
+        #df_list.append(df_temp)
+        ax.semilogy(df_temp['Step'], df_temp['Loss'], color=colors[i], label=labels[i])
+    #df_result = pd.concat(df_list, axis=0, ignore_index=True)
+    #sns.tsplot(time='Step', unit='labels', value='Loss', condition='labels', data=df_result)
+    #ax.set_yscale('log')
+
+    ax.legend(loc=1)
+    ax.set_xlabel('Step')
+    ax.set_ylabel('loss')
+    plt.subplots_adjust(bottom=0.15, top=0.95)
+    plt.savefig('test_data/loss_2.pdf', format='pdf', dpi=600)
 
 def box_plot(path):
     with open(path+'error_rnn_offline.dat', 'rb') as f:
@@ -32,10 +60,11 @@ def box_plot(path):
 
     statistics = zip(mean, std)
     title_l = ['(%.2f, %.2f) '%item for item in statistics]
-    title = p+' ($\mu$, $\sigma$)=' +' '.join(title_l)
+    #title = p +' ($\mu$, $\sigma$)=' +' '.join(title_l)
+    title = 'lstm vae: 6 time steps'
 
     fig, ax = plt.subplots()
-    ax.boxplot(dat_array)
+    ax.boxplot(dat_array, widths=0.25)
     ax.set_xticklabels(['$t_0$']+['$t_0+%i$'%i for i in range(1, bp_steps)])
     ax.set_xticks(range(1, bp_steps+1))
     ax.set_xlabel('time steps')
@@ -44,7 +73,7 @@ def box_plot(path):
     #plt.show()
     plt.waitforbuttonpress()
     plt.savefig(
-        '/home/wuyang/workspace/python/poke/test_data/box_plot.png', format='png', dpi=600)
+        '/home/wuyang/workspace/python/poke/test_data/box_plot.pdf', format='pdf', dpi=600)
     plt.close()
 
 def set_bp_color(bp, color_list, num_per_group):
@@ -67,7 +96,7 @@ def group_box_plot(list_of_path):
         'no prediction',
         'rnn dae', 'lstm dae', 'rnn vae',
         'lstm vae', 'lstm vae s',
-        'ff rnn dae', 'ff lstm dae', 'ff lstm vae',
+        'Jordan rnn dae', 'Jordan lstm dae', 'Jordan lstm vae',
         'lstm vae 1', 'lstm vae 2'
     ]
     num_per_group = len(list_of_path)
@@ -115,7 +144,7 @@ def group_box_plot(list_of_path):
     #plt.show()
     plt.waitforbuttonpress()
     plt.savefig(
-        '/home/wuyang/workspace/python/poke/test_data/box_plot_compare_2.png', format='png', dpi=600)
+        '/home/wuyang/workspace/python/poke/test_data/box_plot_compare_8.pdf', format='pdf', dpi=600)
     plt.close()
 
 if __name__ == '__main__':
@@ -125,7 +154,8 @@ if __name__ == '__main__':
         'rnn_dae(bn)/', 'lstm_dae(bn)/', 'rnn_vae/',
         'lstm_vae/', 'lstm_vae_little/',
         'ff_rnn_dae(bn)/', 'ff_lstm_dae(bn)/', 'ff_lstm_vae/',
-        '6_lstm_vae_8ep/', '6_lstm_vae_new/'
+        '6_lstm_vae_8ep/', '6_lstm_vae_new/',
+        'newset_6_lstm_vae_12/'
     ]
 
     # box_plot(path0+path_list[0])
@@ -138,6 +168,13 @@ if __name__ == '__main__':
     # box_plot(path0+path_list[7])
     # box_plot(path0+path_list[8])
     # box_plot(path0+path_list[9])
-    # box_plot(path0+path_list[10])
+    #box_plot(path0+path_list[11])
 
-    group_box_plot([path0+item for item in path_list[:-2]])
+    #group_box_plot([path0+item for item in path_list[:5]])
+
+    paths = ['run_rnn_dae(bn),tag_loss_rec.csv', 'run_lstm_dae(bn),tag_loss_rec.csv',
+             'run_rnn_vae,tag_loss_loss_vae.csv', 'run_lstm_vae,tag_loss_loss_vae.csv']
+    paths = ['test_data/misc/'+item for item in paths]
+    labels = ['rnn dae', 'lstm dae', 'rnn vae', 'lstm vae']
+
+    #get_loss(paths[2:], labels[2:])

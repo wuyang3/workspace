@@ -312,7 +312,7 @@ def train_set():
     Python open option ab: append and binary mode.
     """
     hover_distance = 0.38
-    k = 50
+    k = 172
     #path = '/home/wuyang/workspace/catkin_ws/src/poke_gazebo/data/run_'+'%02d/'%k
     path = '/home/wuyang/workspace/python/poke/train_cube_table/run_%02d/'%k
     if not os.path.exists(path):
@@ -375,13 +375,13 @@ def train_set():
 
 def test_set():
     hover_distance = 0.38
-    k = 19
-    path = '/home/wuyang/workspace/python/poke/test_cube/run_%02d/'%k
+    k = 0
+    path = '/home/wuyang/workspace/python/poke/test_trans/run_%02d/'%k
     if not os.path.exists(path):
         os.makedirs(path)
     rospy.init_node('poke_random')
     poke_random = PokeRandomNew(hover_distance)
-    name = 'cylinder'
+    name = 'cube'
 
     i = 0
     rospy.sleep(3.0)
@@ -389,12 +389,16 @@ def test_set():
     rospy.sleep(2.0)
     poke_random.move_to_start()
 
-    while not rospy.is_shutdown():
+    while not rospy.is_shutdown() and k < 10:
         if i > 100:
             delete_gazebo_models()
+            #delete_gazebo_table()
+            rospy.sleep(1.0)
+            #load_gazebo_table()
+            #rospy.sleep(1.0)
             name = load_gazebo_models()
             k += 1
-            path = '/home/wuyang/workspace/python/poke/test_cube/run_%02d/'%k
+            path = '/home/wuyang/workspace/python/poke/test_trans/run_%02d/'%k
             if not os.path.exists(path):
                 os.makedirs(path)
             i = 0
@@ -426,5 +430,5 @@ def test_set():
     return 0
 
 if __name__ == '__main__':
-    sys.exit(train_set())
-    #sys.exit(test_set())
+    #sys.exit(train_set())
+    sys.exit(test_set())

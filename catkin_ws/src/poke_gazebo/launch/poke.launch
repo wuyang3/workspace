@@ -8,8 +8,8 @@
   <arg name="debug" default="false"/>
   <arg name="load_robot_description" default="true"/>
 
-  <param name="block" textfile="$(find poke_gazebo)/models/block/block_blue.urdf"/>
-  <param name="table" textfile="$(find poke_gazebo)/models/table_1/model.sdf"/>
+  <param name="block" textfile="$(find poke_gazebo)/models/block/block_green.urdf"/>
+  <param name="table" textfile="$(find poke_gazebo)/models/table_3/model.sdf"/>
 
   <param name="robot_description"
     command="$(find xacro)/xacro.py --inorder $(find poke_description)/urdf/my_gripper.urdf.xacro gazebo:=true"/>

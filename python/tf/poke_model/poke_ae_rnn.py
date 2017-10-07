@@ -436,11 +436,11 @@ class PokeVAERNN(ConvAE):
 
     def encode(self, img, split_size):
         with tf.variable_scope('encoder'):
-            #conv2 = self.conv_layer(
-            #    img, [5, 5], [self.in_channels, self.in_channels], stride=1,
-            #    initializer_type=1, name='conv2')
-            conv3 = self.conv_layer(
-                img, [5, 5], [self.in_channels, 64], stride=2, #is_training=self.is_training,
+            conv2 = self.conv_layer(
+                img, [5, 5], [self.in_channels, self.in_channels], stride=1,
+                initializer_type=1, name='conv2')
+            conv3 = self.conv_bn_layer(
+                conv2, [5, 5], [self.in_channels, 64], stride=2, is_training=self.is_training,
                 initializer_type=1, name='conv3')
             conv4 = self.conv_bn_layer(
                 conv3, [5, 5], [64, 128], stride=2, is_training=self.is_training,

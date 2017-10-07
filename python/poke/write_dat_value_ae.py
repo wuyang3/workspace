@@ -5,6 +5,14 @@ for training. This one prepares data for the training of convolutional autoencod
 unclear whether to feed continuous or discrete actions to the bottleneck of the auto-encoder.
 For simplicity, it is started with discretized actions that are normalized.
 Aug 20: write txt for training for directories with only one object.
+
+Use separate function for writing data for training and testing is because that testing requires
+extra pixel positions for plotting. Additionally, a function write image paths and images are used for t-sne.
+
+main(): write for auto-encoder without rnn
+write_rnn_three(_test): write for AE with three recurrent steps.
+write_rnn(_test): write for AE for arbitrary number of steps.
+write_for_tsne: write image path for generating image embedding.
 """
 import glob
 import numpy as np
@@ -25,6 +33,24 @@ def bound_to_float(s):
     else:
         pass
     return value
+
+def write_for_tsne():
+    train_dir = sorted(glob.glob('test_trans/run_*'))
+    train_dir_total = []
+
+    for i, i_dir in enumerate(train_dir):
+        depth_dir = sorted(glob.glob(i_dir+'/*.png'))
+        rgb_dir = sorted(glob.glob(i_dir+'/*.jpg'))
+
+        train_dir_aug = []
+        for item in rgb_dir:
+            train_dir_aug.append(item)
+
+        train_dir_total.extend(train_dir_aug)
+
+    with open('embedding_newtrans_generate.txt', 'wb') as f:
+        for item in train_dir_total:
+            f.write('%s\n'%item)
 
 def main():
     """
@@ -111,7 +137,10 @@ def main():
             train_file.write('%s\n'%item)
 
 def write_rnn_three(CONSECUTIVE = 1):
-    train_dir = sorted(glob.glob('train_cube/run*'))
+    path = 'train_cube_table/run*'#'train_cube/run*'
+    train_dir = sorted(glob.glob(path))
+    #name = 'train_cube_ae_rnn_1.txt'
+    name = 'train_cube_table_rnn.txt'
     train_dir_total = []
 
     for i, i_dir in enumerate(train_dir):
@@ -181,7 +210,7 @@ def write_rnn_three(CONSECUTIVE = 1):
         #print(i_dir+' :image until %s included'%depth_dir[k])
         train_dir_total.extend(train_dir_aug)
 
-    with open('train_cube_ae_rnn_3.txt', 'wb') as train_file:
+    with open(name, 'wb') as train_file:
         for item in train_dir_total:
             train_file.write('%s\n'%item)
 
@@ -195,8 +224,11 @@ def write_rnn(bp_steps):
     that two actions are always consecutive from actions_clean.dat. You can do that in actions.dat.
     However, it is easier to do it from rgb_num and pick the right action from actions.dat.
     """
-    train_dir = sorted(glob.glob('train_cube/run*'))
-    #train_dir = train_dir[:1]
+    path = 'train_cube_table/run*'#'train_cube/run*'
+    train_dir = sorted(glob.glob(path))
+    #name = 'train_cube_ae_rnn_6.txt'
+    name = 'train_cube_table_rnn_6.txt'
+
     train_dir_total = []
 
     for i, i_dir in enumerate(train_dir):
@@ -252,12 +284,17 @@ def write_rnn(bp_steps):
         print(i_dir+' :image until %s included'%rgb_dir[k])
         train_dir_total.extend(train_dir_aug)
 
-    with open('train_rnn_6_steps.txt', 'wb') as train_file:
+    with open(name, 'wb') as train_file:
         for item in train_dir_total:
             train_file.write('%s\n'%item)
 
 def write_rnn_three_test(CONSECUTIVE = 1):
-    train_dir = sorted(glob.glob('test_cube/run*'))
+    #path = 'test_cube/run*'
+    #name = 'test_cube_3.txt'
+    path = 'test_cube_table/run*'
+    name = 'test_cube_table_3.txt'
+
+    train_dir = sorted(glob.glob(path))
     train_dir = train_dir[:10]
     train_dir_total = []
 
@@ -348,13 +385,19 @@ def write_rnn_three_test(CONSECUTIVE = 1):
         #print(i_dir+' :image until %s included'%depth_dir[k])
         train_dir_total.extend(train_dir_aug)
 
-    with open('test_cube_3.txt', 'wb') as train_file:
+    with open(name, 'wb') as train_file:
         for item in train_dir_total:
             train_file.write('%s\n'%item)
 
 def write_rnn_test(bp_steps):
-    train_dir = sorted(glob.glob('test_cube/run*'))
-    train_dir = train_dir[:10]
+    #path = 'test_cube/run*'
+    #name = 'test_multi_cube_%d.txt'%bp_steps
+
+    path = 'test_cube_table/run*'
+    name = 'test_multi_cube_table_%d.txt'%bp_steps
+
+    train_dir = sorted(glob.glob(path))
+    #train_dir = train_dir[:10]
     train_dir_total = []
 
     for i, i_dir in enumerate(train_dir):
@@ -412,15 +455,19 @@ def write_rnn_test(bp_steps):
         print(i_dir+' :image until %s included'%rgb_dir[k])
         train_dir_total.extend(train_dir_aug)
 
-    with open('test_multi_cube_%d.txt'%bp_steps, 'wb') as train_file:
+    with open(name, 'wb') as train_file:
         for item in train_dir_total:
             train_file.write('%s\n'%item)
 
 
 if __name__ == '__main__':
     #main()
-    #write_rnn_three(CONSECUTIVE=0)
+
+    #write_rnn_three(CONSECUTIVE=1)
     #write_rnn(6)
-    write_rnn_three_test(CONSECUTIVE=1)
+
+    #write_rnn_three_test(CONSECUTIVE=1)
     #write_rnn_test(6)
+
+    write_for_tsne()
 

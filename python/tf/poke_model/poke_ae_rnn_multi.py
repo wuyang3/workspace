@@ -165,13 +165,15 @@ def batch_images_actions_multi(input_queue, batch_size, num_threads, min_after_d
     output = (images, actions)
     return output
 
-def ae_rnn_multi_train(num_epochs=6, batch_size=16, split_size=256,
-                       learning_rate=0.000568849009438, epsilon=3.04550969584e-05, j=1):
+def ae_rnn_multi_train(num_epochs=12, batch_size=16, split_size=512,
+                       learning_rate=0.0002, epsilon=1e-05, j=1):
     """
     Default training parameters will be used and overrided when doing random search.
     """
-    if not os.path.exists('../logs/pokeAERNN/rs_%02d/'%j):
-        os.makedirs('../logs/pokeAERNN/rs_%02d/'%j)
+    path = '../logs/pokeAERNN_new'
+    #path = '../logs/pokeAERNN'
+    if not os.path.exists(path+'/rs_%02d/'%j):
+        os.makedirs(path+'/rs_%02d/'%j)
 
     tf.reset_default_graph()
 
@@ -182,7 +184,8 @@ def ae_rnn_multi_train(num_epochs=6, batch_size=16, split_size=256,
     type_img = 1 #1\0
 
     input_queue = read_data_list_multi(
-        '../../poke/train_rnn_6_steps.txt', num_epochs, shuffle, bp_steps)
+        #'../../poke/train_rnn_6_steps.txt', num_epochs, shuffle, bp_steps)
+        '../../poke/train_cube_table_rnn_6.txt', num_epochs, shuffle, bp_steps)
 
     images, actions = batch_images_actions_multi(
         input_queue, batch_size, num_threads, min_after_dequeue, bp_steps,
@@ -198,7 +201,7 @@ def ae_rnn_multi_train(num_epochs=6, batch_size=16, split_size=256,
                                split_size=split_size, in_channels=in_channels,
                                corrupted=corrupted, is_training=True, bp_steps=bp_steps)
         saver = tf.train.Saver(max_to_keep=2)
-        train_writer = tf.summary.FileWriter('../logs/pokeAERNN/rs_%02d/'%j, sess.graph)
+        train_writer = tf.summary.FileWriter(path+'/rs_%02d/'%j, sess.graph)
 
         tf.global_variables_initializer().run()
         tf.local_variables_initializer().run()
@@ -221,7 +224,7 @@ def ae_rnn_multi_train(num_epochs=6, batch_size=16, split_size=256,
                     print('step %d: loss->%.4f' %(step, loss))
 
                 if step%1000 == 0:
-                    saver.save(sess, '../logs/pokeAERNN/rs_%02d/'%j, global_step=step)
+                    saver.save(sess, path+'/rs_%02d/'%j, global_step=step)
                 step+=1
 
             train_writer.close()

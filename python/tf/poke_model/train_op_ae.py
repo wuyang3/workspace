@@ -101,18 +101,18 @@ def main():
 
 def ae_rnn_train():
     shuffle = True
-    num_epochs = 8
+    num_epochs = 6
     batch_size = 16
     num_threads = 4
     min_after_dequeue = 128
 
     type_img = 1 #1\0
-    split_size = 64
+    split_size = 512
     in_channels = 3 #3\1
     corrupted = 0 #1\0
 
     input_queue = read_data_list_ae_rnn(
-        '../../poke/train_cube_ae_rnn_1.txt', num_epochs, shuffle)
+        '../../poke/train_cube_table_rnn.txt', num_epochs, shuffle)
 
     images_1, images_2, images_3, u1s, u2s = batch_images_actions_ae_rnn(
         input_queue, batch_size, num_threads, min_after_dequeue, type_img=type_img,
@@ -121,7 +121,7 @@ def ae_rnn_train():
     # Initial training parameters.
     learning_rate = 0.0003
     epsilon = 1e-05
-    step = 0
+    step = 79810
 
     with tf.Session() as sess:
         #poke_ae = PokeAERNN(learning_rate, epsilon, batch_size, split_size,
@@ -133,10 +133,10 @@ def ae_rnn_train():
         #poke_ae = PokeAEFFRNN(learning_rate, epsilon, batch_size, in_channels,
         #                      corrupted, is_training=True, lstm=1, vae=1)
         saver = tf.train.Saver(max_to_keep=2)
-        train_writer = tf.summary.FileWriter('../logs/pokeAERNN/', sess.graph)
+        train_writer = tf.summary.FileWriter('../logs/pokeAERNN_new/', sess.graph)
 
-        #saver.restore(sess, tf.train.latest_checkpoint('../logs/pokeAE/'))
-        tf.global_variables_initializer().run()
+        saver.restore(sess, tf.train.latest_checkpoint('../logs/pokeAERNN_new/lstm_vae_8/'))
+        #tf.global_variables_initializer().run()
         tf.local_variables_initializer().run()
 
         coord = tf.train.Coordinator()
@@ -158,7 +158,7 @@ def ae_rnn_train():
                     print('step %d: loss->%.4f' %(step, loss))
 
                 if step%1000 == 0:
-                    saver.save(sess, '../logs/pokeAERNN/', global_step=step)
+                    saver.save(sess, '../logs/pokeAERNN_new/', global_step=step)
                 step+=1
 
             train_writer.close()
@@ -251,5 +251,5 @@ def ae_rnnc_train():
 
 if __name__ == '__main__':
     #main()
-    #ae_rnn_train()
-    ae_rnnc_train()
+    ae_rnn_train()
+    #ae_rnnc_train()
