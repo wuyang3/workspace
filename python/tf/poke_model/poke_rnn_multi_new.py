@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """
 Train an multiple step rnn with autoencoder.
+Newer version with self.pose directly used for sampling for i0. No zero action is fed to LSTM.
+In order to 
 """
 from tensorflow.python.framework import ops
 from tensorflow.python.framework import dtypes
@@ -10,7 +12,7 @@ import os
 from poke_autoencoder import ConvAE
 from poke_ae_rnn import PokeVAERNN
 
-class PokeMultiRNN(PokeVAERNN):
+class PokeMultiNew(PokeVAERNN):
     def __init__(self, learning_rate=1e-4, epsilon=1e-7, batch_size=16,
                  split_size=128, in_channels=3, corrupted=0,
                  is_training=True, bp_steps=6):
@@ -26,11 +28,13 @@ class PokeMultiRNN(PokeVAERNN):
         for j, item in enumerate(self.i_list):
             tf.summary.image('image%d'%j, item)
 
-        self.identity, self.pose, self.feature_map_shape = self.encode(
+        self.identity, self.pose, self.feature_map_shape = self.encode_new(
             self.i0, split_size)
-        self.transit_series = self.Recurrent_dynamic_transit(self.u, self.pose)
+        self.transit_series = self.Recurrent_dynamic_transit(
+            self.u, self.pose, reuse=False, num_split=bp_steps-1)
 
-        self.sampling, mean, logss = self.hidden_sample(self.identity, self.transit_series)
+        self.sampling, mean, logss = self.hidden_sample_new(
+            self.identity, self.pose, self.transit_series)
 
         self.decoding_list = []
         for j, sample in enumerate(self.sampling):
@@ -45,16 +49,41 @@ class PokeMultiRNN(PokeVAERNN):
         self.train_op = self.train(self.loss, learning_rate, epsilon)
 
         # a temporal reusing scope for quicker inference during testing.
-        self.transit_temp = self.Recurrent_dynamic_transit(
-            self.u, self.pose, reuse=True, num_split=1)
-        self.transit_temp_l = self.Recurrent_dynamic_transit(
-            self.u, self.pose, reuse=True, num_split=5)
+        # self.transit_temp = self.Recurrent_dynamic_transit(
+        #    self.u, self.pose, reuse=True, num_split=1)
+        # self.transit_temp_l = self.Recurrent_dynamic_transit(
+        #    self.u, self.pose, reuse=True, num_split=5)
 
         self.merged = tf.summary.merge_all()
 
-    def Recurrent_dynamic_transit(self, inputs, hidden_states, reuse=False, num_split=6):
+    def encode_new(self, img, split_size):
+        with tf.variable_scope('encoder'):
+            conv2 = self.conv_layer(
+                img, [5, 5], [self.in_channels, self.in_channels], stride=1,
+                initializer_type=1, name='conv2')
+            conv3 = self.conv_bn_layer(
+                conv2, [5, 5], [self.in_channels, 64], stride=2, is_training=self.is_training,
+                initializer_type=1, name='conv3')
+            conv4 = self.conv_bn_layer(
+                conv3, [5, 5], [64, 128], stride=2, is_training=self.is_training,
+                initializer_type=1, name='conv4')
+            conv5 = self.conv_bn_layer(
+                conv4, [5, 5], [128, 256], stride=2, is_training=self.is_training,
+                initializer_type=1, name='conv5')
+            shape = conv5.get_shape().as_list()
+            feature_map_size = shape[1]*shape[2]*shape[3]
+            conv5_flat = tf.reshape(
+                conv5, [-1, feature_map_size], 'conv5_flat')
+            fc6 = self.fc_bn_layer(conv5_flat, 1024, is_training=self.is_training,
+                                   initializer_type=1, name='fc6')
+            fc7 = self.fc_no_activation(fc6, 1024, initializer_type=1, name='fc7')
+            identity, pose = tf.split(fc7,
+                                      num_or_size_splits=[1024-split_size, split_size],
+                                      axis=1)
+        return identity, pose, shape
+
+    def Recurrent_dynamic_transit(self, inputs, hidden_states, reuse=False, num_split=5):
         batch_size, split_size = hidden_states.get_shape().as_list()
-        _, bp_steps, _ = inputs.get_shape().as_list()
         #assert bp_steps==self.bp_steps, (
         #    'Input tensor has wrong number of steps.'
         #)
@@ -62,7 +91,7 @@ class PokeMultiRNN(PokeVAERNN):
         with tf.variable_scope('LSTM', reuse=reuse):
             cell_states = tf.zeros_like(hidden_states)
             init_layer1_state = tf.contrib.rnn.LSTMStateTuple(cell_states, hidden_states)
-            init_layer2_state = tf.contrib.rnn.LSTMStateTuple(cell_states, cell_states)
+            init_layer2_state = tf.contrib.rnn.LSTMStateTuple(cell_states, hidden_states)
             init_tuple_states = tuple([init_layer1_state, init_layer2_state])
 
             cells = [tf.contrib.rnn.LSTMCell(split_size, state_is_tuple=True),
@@ -80,6 +109,38 @@ class PokeMultiRNN(PokeVAERNN):
 
         return transit_series
 
+    def hidden_sample_new(self, identity, pose, transit_series):
+        assert type(transit_series)==list, (
+            'Input is not a list of transitted tensors.'
+        )
+        sampling = []
+        mean = []
+        logss = []
+        with tf.variable_scope('sampling'):
+            z_mean_i, z_log_sigma_sq_i = tf.split(identity, 2, 1)
+            mean.append(z_mean_i)
+            logss.append(z_log_sigma_sq_i)
+            z_i = self.hidden_code_sample(z_mean_i, z_log_sigma_sq_i, 'sampling_i')
+
+            z_mean_p, z_log_sigma_sq_p = tf.split(pose, 2, 1)
+            mean.append(z_mean_p)
+            logss.append(z_log_sigma_sq_p)
+            z_p = self.hidden_code_sample(z_mean_p, z_log_sigma_sq_p, 'sampling_p')
+
+            z = tf.concat([z_i, z_p], 1)
+            sampling.append(z)
+            tf.summary.histogram('zi', z)
+            for j, item in enumerate(transit_series):
+                z_mean_t, z_log_sigma_sq_t = tf.split(item, 2, 1)
+                z_t = self.hidden_code_sample(z_mean_t, z_log_sigma_sq_t, 'sampling_%d'%j)
+                z = tf.concat([z_i, z_t], 1)
+                sampling.append(z)
+                tf.summary.histogram('z%d'%j, z)
+
+                mean.append(z_mean_t)
+                logss.append(z_log_sigma_sq_t)
+        return sampling, mean, logss
+
     def loss_multi_function(self, i_list, decoding_list, mean, logss):
         assert len(mean)==len(logss) and len(i_list)==len(decoding_list), (
             'Steps not matching'
@@ -90,6 +151,118 @@ class PokeMultiRNN(PokeVAERNN):
                 for j in range(len(i_list)):
                     loss_rec+=tf.reduce_sum(tf.square(i_list[j]-decoding_list[j]), [1, 2, 3])
             with tf.variable_scope('kl'):
+                assert len(mean)==len(logss)
+                loss_kl = 0
+                for j in range(len(mean)):
+                    loss_kl+= -0.5*tf.reduce_sum(1+logss[j]-tf.square(mean[j])-tf.exp(logss[j]), 1)
+
+            # loss averaged over batches thus different from pixel wise diferrence.
+            loss = tf.reduce_mean(loss_rec + loss_kl)
+            tf.summary.scalar('loss_vae', loss)
+            tf.summary.scalar('loss_rec', tf.reduce_mean(loss_rec))
+            tf.summary.scalar('loss_kl', tf.reduce_mean(loss_kl))
+        return loss
+
+class PokeMultiNew_s(PokeMultiNew):
+    def __init__(self, learning_rate=1e-4, epsilon=1e-7, batch_size=16,
+                 split_size=128, in_channels=3, corrupted=0,
+                 is_training=True, bp_steps=6):
+        self.in_channels = in_channels
+        self.is_training = is_training
+        self.bp_steps = bp_steps
+        self.i = tf.placeholder(tf.float32, [batch_size, bp_steps, 64, 64, in_channels])
+        self.u = tf.placeholder(tf.float32, [batch_size, None, 4])
+
+        i_list = tf.split(self.i, bp_steps, axis=1)
+        self.i_list = [tf.squeeze(item, axis=1) for item in i_list]
+        self.i0 = self.i_list[0]
+        for j, item in enumerate(self.i_list):
+            tf.summary.image('image%d'%j, item)
+
+        self.identity, self.pose, self.feature_map_shape = self.encode_new(
+            self.i0, split_size)
+        self.z, z_i, self.pose, mean, logss = self.hidden_sample_new(self.identity, self.pose)
+
+        self.transit_series = self.Recurrent_dynamic_transit(
+            self.u, self.pose, reuse=False, num_split=bp_steps-1)
+
+        self.decoding_list = []
+        decoding = self.decode(self.z, self.feature_map_shape, False)
+        self.decoding_list.append(decoding)
+        for j, transit in enumerate(self.transit_series):
+            tran_t = tf.concat([z_i, transit], axis=1)
+            reuse = True
+            decoding = self.decode(tran_t, self.feature_map_shape, reuse)
+            self.decoding_list.append(decoding)
+            tf.summary.image('image_rec%d'%j, decoding)
+
+        self.loss = self.loss_multi_function(self.i_list, self.decoding_list, mean, logss)
+        self.train_op = self.train(self.loss, learning_rate, epsilon)
+
+        # a temporal reusing scope for quicker inference during testing.
+        self.transit_temp = self.Recurrent_dynamic_transit(
+            self.u, self.pose, reuse=True, num_split=1)
+        self.transit_temp_l = self.Recurrent_dynamic_transit(
+            self.u, self.pose, reuse=True, num_split=5)
+
+        self.merged = tf.summary.merge_all()
+
+    def Recurrent_dynamic_transit(self, inputs, hidden_states, reuse=False, num_split=5):
+        batch_size, split_size = hidden_states.get_shape().as_list()
+        print 'split size %d'%split_size
+        #assert bp_steps==self.bp_steps, (
+        #    'Input tensor has wrong number of steps.'
+        #)
+        transit_series = []
+        with tf.variable_scope('LSTM', reuse=reuse):
+            cell_states = tf.zeros_like(hidden_states)
+            init_layer1_state = tf.contrib.rnn.LSTMStateTuple(cell_states, hidden_states)
+            #init_tuple_states = tuple([init_layer1_state])
+
+            cell = tf.contrib.rnn.LSTMCell(split_size, state_is_tuple=True)
+            state_series, current_states = tf.nn.dynamic_rnn(
+                cell, inputs, initial_state=init_layer1_state)
+
+            temp_list = tf.split(state_series, num_split, axis=1)
+            state_list = [tf.squeeze(item, axis=1) for item in temp_list]
+            # for j, item in enumerate(state_list):
+            #     #transit = self.fc_no_activation(
+            #     #    item, split_size, initializer_type=1, name='transit%d'%j)
+            #     total = tf.concat([iden, item], axis=1)
+            #     print 'total size ', total.get_shape().as_list()
+            #     transit_series.append(total)
+
+        return state_list
+
+    def hidden_sample_new(self, identity, pose):
+        mean = []
+        logss = []
+        with tf.variable_scope('sampling'):
+            z_mean_i, z_log_sigma_sq_i = tf.split(identity, 2, 1)
+            mean.append(z_mean_i)
+            logss.append(z_log_sigma_sq_i)
+            z_i = self.hidden_code_sample(z_mean_i, z_log_sigma_sq_i, 'sampling_i')
+
+            z_mean_p, z_log_sigma_sq_p = tf.split(pose, 2, 1)
+            mean.append(z_mean_p)
+            logss.append(z_log_sigma_sq_p)
+            z_p = self.hidden_code_sample(z_mean_p, z_log_sigma_sq_p, 'sampling_p')
+
+            z = tf.concat([z_i, z_p], 1)
+            tf.summary.histogram('zi', z)
+        return z, z_i, z_p, mean, logss
+
+    def loss_multi_function(self, i_list, decoding_list, mean, logss):
+        assert len(mean)==len(logss) and len(i_list)==len(decoding_list), (
+            'Steps not matching'
+        )
+        with tf.variable_scope('loss'):
+            with tf.variable_scope('rec'):
+                loss_rec = 0
+                for j in range(len(i_list)):
+                    loss_rec+=tf.reduce_sum(tf.square(i_list[j]-decoding_list[j]), [1, 2, 3])
+            with tf.variable_scope('kl'):
+                assert len(mean)==len(logss)
                 loss_kl = 0
                 for j in range(len(mean)):
                     loss_kl+= -0.5*tf.reduce_sum(1+logss[j]-tf.square(mean[j])-tf.exp(logss[j]), 1)
@@ -142,7 +315,7 @@ def batch_images_actions_multi(input_queue, batch_size, num_threads, min_after_d
     assert shape0[0]==shape1[0]+1==bp_steps, (
         'Truncated time steps not matching'
     )
-    action_full = tf.concat([tf.zeros([1, 4]), action], axis=0) # [5, 4] -> [6, 4]
+    #action_full = tf.concat([tf.zeros([1, 4]), action], axis=0) # [5, 4] -> [6, 4]
 
     image_list = []
 
@@ -153,7 +326,7 @@ def batch_images_actions_multi(input_queue, batch_size, num_threads, min_after_d
             img = tf.image.decode_jpeg(img_file)
             img_float = tf.cast(img, tf.float32)
             if normalized:
-                img_float = img_float/255.0
+                img_float = img_float/255.0 # or 0-1?
             img_resized = tf.image.resize_images(img_float, [target_size, target_size])
             img_resized.set_shape((target_size, target_size, 3))
         else:
@@ -166,7 +339,7 @@ def batch_images_actions_multi(input_queue, batch_size, num_threads, min_after_d
         image_list.append(img_resized)
     image_stack = tf.stack(image_list, axis=0) #-> [bp_steps, target_size, target_size, 3 or 1]
 
-    images, actions = tf.train.batch([image_stack, action_full],
+    images, actions = tf.train.batch([image_stack, action],
                                      batch_size,
                                      num_threads,
                                      capacity=min_after_dequeue+3*batch_size)
@@ -197,7 +370,7 @@ def ae_rnn_multi_train(num_epochs=12, batch_size=16, split_size=128,
 
     images, actions = batch_images_actions_multi(
         input_queue, batch_size, num_threads, min_after_dequeue, bp_steps,
-        target_size=64, type_img=type_img, normalized=0) # not normalized which is good.
+        target_size=64, type_img=type_img, normalized=0)
 
     # Initial training parameters.
     in_channels = 3 #3\1
@@ -205,9 +378,14 @@ def ae_rnn_multi_train(num_epochs=12, batch_size=16, split_size=128,
     step = 0
 
     with tf.Session() as sess:
-        poke_ae = PokeMultiRNN(learning_rate, epsilon, batch_size=batch_size,
-                               split_size=split_size, in_channels=in_channels,
-                               corrupted=corrupted, is_training=True, bp_steps=bp_steps)
+        # poke_ae = PokeMultiNew(learning_rate, epsilon, batch_size=batch_size,
+        #                        split_size=split_size, in_channels=in_channels,
+        #                        corrupted=corrupted, is_training=True, bp_steps=bp_steps)
+
+        poke_ae = PokeMultiNew_s(learning_rate, epsilon, batch_size=batch_size,
+                                 split_size=split_size, in_channels=in_channels,
+                                 corrupted=corrupted, is_training=True, bp_steps=bp_steps)
+
         saver = tf.train.Saver(max_to_keep=2)
         train_writer = tf.summary.FileWriter(path+'/rs_%02d/'%j, sess.graph)
 

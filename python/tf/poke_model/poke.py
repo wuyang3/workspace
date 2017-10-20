@@ -14,8 +14,7 @@ class Poke(object):
     Model of Siamese network for predicting the poke action.
     """
     def __init__(self, train_layers=['inverse','forward','siamese'],
-                 include_type = 0,
-                 learning_rate=0.001, epsilon=1e-08, lamb=0.1):
+                 learning_rate=0.001, epsilon=1e-08, lamb=0.1, include_type = 0):
         self.include_type = include_type
         self.i1 = tf.placeholder(tf.float32, [None, 227, 227, 3], 'i1')
         self.i2 = tf.placeholder(tf.float32, [None, 227, 227, 3], 'i2')

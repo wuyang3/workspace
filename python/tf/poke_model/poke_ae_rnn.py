@@ -402,6 +402,7 @@ class PokeVAERNN(ConvAE):
         self.u2 = tf.placeholder(tf.float32, [batch_size, 4], 'u2')
         self.u3 = tf.placeholder(tf.float32, [batch_size, 4], 'u3')
         self.u1 = tf.zeros([batch_size, 4], tf.float32)
+        self.u = (self.u1, self.u2, self.u3)
         tf.summary.image('image1', self.i1)
         tf.summary.image('image2', self.i2)
         tf.summary.image('image3', self.i3)
@@ -415,7 +416,7 @@ class PokeVAERNN(ConvAE):
             self.identity, self.pose, self.feature_map_shape = self.encode(self.i1, split_size)
 
         self.transit_series = self.Reccurent_state_transit(
-            [self.u1, self.u2, self.u3], self.pose, lstm)
+            self.u, self.pose, lstm)
 
         self.sampling, self.mean, self.logss = self.hidden_sample(self.identity, self.transit_series)
 
@@ -461,12 +462,12 @@ class PokeVAERNN(ConvAE):
                                              initializer_type=1, name='iden')
         return identity, pose, shape
 
-    def Reccurent_state_transit(self, input_series, hidden_states, lstm):
+    def Reccurent_state_transit(self, input_series, hidden_states, lstm, reuse=False):
         batch_size, split_size = hidden_states.get_shape().as_list()
         transit_series = []
 
         if lstm:
-            with tf.variable_scope('LSTM'):
+            with tf.variable_scope('LSTM', reuse=reuse):
                 cell_states = tf.zeros_like(hidden_states)
                 init_layer1_state = tf.contrib.rnn.LSTMStateTuple(cell_states, hidden_states)
                 init_layer2_state = tf.contrib.rnn.LSTMStateTuple(cell_states, cell_states)

@@ -104,7 +104,10 @@ class ConvAE(object):
                 [1, 1, 1, 1],
                 padding='SAME')
             conv_bias = tf.nn.bias_add(conv, biases)
-            output = act_func(conv_bias)
+            if act_func == None:
+                output = conv_bias
+            else:
+                output = act_func(conv_bias)
             #set_shape does not accept tensor
             #output.set_shape([batch, height, width, channels_size[0]])
             #this sets first size to none. why? Not used.

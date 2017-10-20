@@ -63,5 +63,138 @@ def main():
         for item in train_dir_total:
             train_file.write('%s\n' %item)
 
+def cube_table():
+    train_dir = sorted(glob.glob('train_cube_table/run*'))
+    train_dir_total = []
+
+    for i, i_dir in enumerate(train_dir):
+        depth_dir = sorted(glob.glob(i_dir+'/*.png'))
+        rgb_dir = sorted(glob.glob(i_dir+'/*.jpg'))
+
+        rgb_num = [int(j[-8:-4]) for j in rgb_dir]
+        train_dir_aug = []
+
+        with open(i_dir+'/actions.dat','r') as f:
+            actions = [line.strip().split() for line in f.readlines()]
+
+        k = 0
+        for j, item in enumerate(rgb_num[:-1]):
+            if (rgb_num[j+1]-item==1):
+                action = actions[item]
+                dx_i = bound_to_float(action[2])
+                dy_i = bound_to_float(action[3])
+                dx = np.floor(dx_i/12)
+                dy = np.floor(dy_i/12)
+                dxy = 20*dx+dy
+
+                dtheta = np.floor(float(action[4])/(np.pi/18))
+                dl = np.floor((float(action[5])-0.04)/0.004)
+
+                train_dir_aug.append(rgb_dir[j]+' '+rgb_dir[j+1]+' '
+                                     +round_by_half(action[2])+' '+round_by_half(action[3])
+                                     +' '+action[4]+' '+action[5]+' '
+                                     +'%d'%dxy+' '+'%d'%dtheta+' '+'%d'%dl)
+                k = j+1
+            else:
+                pass
+
+        print(i_dir+' :image until %s included'%rgb_dir[k])
+        train_dir_total.extend(train_dir_aug)
+
+    with open('train_cube_table_inv.txt', 'wb') as train_file:
+        for item in train_dir_total:
+            train_file.write('%s\n' %item)
+
+def cube_table_depth():
+    train_dir = sorted(glob.glob('train_cube_table/run*'))
+    train_dir_total = []
+
+    for i, i_dir in enumerate(train_dir):
+        depth_dir = sorted(glob.glob(i_dir+'/*.png'))
+
+        depth_num = [int(j[-8:-4]) for j in depth_dir]
+        train_dir_aug = []
+
+        with open(i_dir+'/actions.dat','r') as f:
+            actions = [line.strip().split() for line in f.readlines()]
+
+        k = 0
+        for j, item in enumerate(depth_num[:-1]):
+            if (depth_num[j+1]-item==1):
+                action = actions[item]
+                dx_i = bound_to_float(action[2])
+                dy_i = bound_to_float(action[3])
+                dx = np.floor(dx_i/12)
+                dy = np.floor(dy_i/12)
+                dxy = 20*dx+dy
+
+                dtheta = np.floor(float(action[4])/(np.pi/18))
+                dl = np.floor((float(action[5])-0.04)/0.004)
+
+                train_dir_aug.append(depth_dir[j]+' '+depth_dir[j+1]+' '
+                                     +round_by_half(action[2])+' '+round_by_half(action[3])
+                                     +' '+action[4]+' '+action[5]+' '
+                                     +'%d'%dxy+' '+'%d'%dtheta+' '+'%d'%dl)
+                k = j+1
+            else:
+                pass
+
+        print(i_dir+' :image until %s included'%depth_dir[k])
+        train_dir_total.extend(train_dir_aug)
+
+    with open('train_cube_table_inv_d.txt', 'wb') as train_file:
+        for item in train_dir_total:
+            train_file.write('%s\n' %item)
+
+def cube_table_t():
+    train_dir = sorted(glob.glob('train_cube_table/run*'))
+    train_dir_total = []
+
+    for i, i_dir in enumerate(train_dir):
+        rgb_dir = sorted(glob.glob(i_dir+'/*.jpg'))
+        depth_dir = sorted(glob.glob(i_dir+'/*.png'))
+
+        rgb_num = [int(j[-8:-4]) for j in rgb_dir]
+        depth_num = [int(j[-8:-4]) for j in depth_dir]
+        assert rgb_num == depth_num, (
+            'rgb and depth not matching at run_%02d'%i
+        )
+        train_dir_aug = []
+
+        with open(i_dir+'/actions.dat','r') as f:
+            actions = [line.strip().split() for line in f.readlines()]
+
+        k = 0
+        for j, item in enumerate(depth_num[:-1]):
+            if (depth_num[j+1]-item==1):
+                action = actions[item]
+                dx_i = bound_to_float(action[2])
+                dy_i = bound_to_float(action[3])
+                dx = np.floor(dx_i/12)
+                dy = np.floor(dy_i/12)
+                dxy = 20*dx+dy
+
+                dtheta = np.floor(float(action[4])/(np.pi/18))
+                dl = np.floor((float(action[5])-0.04)/0.004)
+
+                train_dir_aug.append(' '.join(
+                    [rgb_dir[j], rgb_dir[j+1], depth_dir[j], depth_dir[j+1],
+                     round_by_half(action[2]), round_by_half(action[3]),
+                     action[4], action[5], '%d'%dxy, '%d'%dtheta, '%d'%dl]))
+
+                k = j+1
+            else:
+                pass
+
+        print(i_dir+' :image until %s included'%depth_dir[k])
+        train_dir_total.extend(train_dir_aug)
+
+    with open('train_cube_table_inv_t.txt', 'wb') as train_file:
+        for item in train_dir_total:
+            train_file.write('%s\n' %item)
+
 if __name__ == '__main__':
-    main()
+    #main()
+    #cube_table()
+    #cube_table_depth()
+    cube_table_t()

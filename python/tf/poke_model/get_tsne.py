@@ -13,6 +13,7 @@ import matplotlib.pyplot as plt
 
 from poke_bn_vae import PokeBnVAE
 from poke_ae_rnn import PokeVAERNN
+from poke_rnn_multi_new import PokeMultiNew, PokeMultiNew_s
 
 import time
 import pandas as pd
@@ -42,15 +43,11 @@ def batch_dir_images(
     if type_img:
         img = tf.image.decode_jpeg(img_file)
         img_float = tf.cast(img, tf.float32)
-        if normalized:
-            img_float = img_float/255.0*2.0-1.0
         img_resized = tf.image.resize_images(img_float, [64, 64])
         img_resized.set_shape((64, 64, 3))
     else:
         img = tf.image.decode_png(img_file, dtype=tf.uint8)
         img_float = tf.cast(img, tf.float32)
-        if normalized:
-            tmg_float = img_float/255.0*2.0-1.0
         img_resized = tf.image.resize_images(img_float, [64, 64])
         img_resized.set_shape((64, 64, 1))
 
@@ -74,8 +71,8 @@ def get_embeddings():
     normalized = 0
     split_size = 512
 
-    paths_name = '../../poke/embedding_newtrans_generate.txt'
-    path = '../../poke/test_trans/'
+    paths_name = '../../poke/embedding_newset_generate.txt'
+    path = '../../poke/test_cube_table/'
     #restore_path = '../logs/pokeAERNN/lstm_vae/'
     restore_path = '../logs/pokeAERNN_new/lstm_vae_14/'
 
@@ -98,6 +95,7 @@ def get_embeddings():
         identity_list = []
         transit_list = []
         path_list = []
+        pose_list = []
         try:
             while not coord.should_stop():
                 dir, img = sess.run([dirs, imgs])
@@ -105,11 +103,13 @@ def get_embeddings():
                              poke_ae.u2: np.zeros([batch_size, 4]),
                              poke_ae.u3: np.zeros([batch_size, 4])}
 
-                identity, transit = sess.run([poke_ae.identity, poke_ae.transit_series[0]],
-                                                   feed_dict=feed_dict)
+                identity, transit, pose = sess.run(
+                    [poke_ae.identity, poke_ae.transit_series[0], poke_ae.pose],
+                    feed_dict=feed_dict)
                 identity_list.append(identity)
                 transit_list.append(transit)
                 path_list.append(dir)
+                pose_list.append(pose)
                 step+=1
                 print step
         except tf.errors.OutOfRangeError:
@@ -118,12 +118,110 @@ def get_embeddings():
             iden_arr = np.concatenate(identity_list, axis=0)
             transit_arr = np.concatenate(transit_list, axis=0)
             path_arr = np.array(path_list)
-            np.save(path+'iden_arr.npy', iden_arr)
-            np.save(path+'tran_arr.npy', transit_arr)
-            np.save(path+'path_arr.npy', path_arr)
+            #np.save(path+'iden_arr.npy', iden_arr)
+            #np.save(path+'tran_arr.npy', transit_arr)
+            #np.save(path+'path_arr.npy', path_arr)
+            #pose_arr = np.concatenate(pose_list, axis=0)
+            #np.save(path+'pose_arr.npy', pose_arr)
             print iden_arr.shape
             print transit_arr.shape
             print path_arr.shape
+            coord.request_stop()
+            coord.join(threads)
+
+def get_multi_embeddings():
+    shuffle = True
+    num_epochs = 1
+
+    batch_size = 1
+    num_threads = 1
+    min_after_dequeue = 4
+
+    type_img = 1
+    in_channels = 3
+    normalized = 0
+    split_size = 128
+
+    paths_name = '../../poke/embedding_newset_generate.txt'
+    path = '../../poke/test_data/'
+    #restore_path = '../logs/pokeAERNN_new/new_6_lstm_vae_little/'
+    restore_path = '../logs/pokeAERNN_new/new_s_6_lstm_vae_little/'
+
+    input_queue = read_data_embedding(paths_name, num_epochs, shuffle)
+    dirs, imgs = batch_dir_images(input_queue, batch_size, num_threads, min_after_dequeue,
+                                  type_img, normalized=0)
+
+    step = 0
+    with tf.Session() as sess:
+        #poke_ae = PokeMultiNew(batch_size=batch_size, split_size=split_size,
+        #                       in_channels=in_channels, corrupted=0, is_training=False, bp_steps=2)
+        poke_ae = PokeMultiNew_s(batch_size=batch_size, split_size=split_size,
+                                 in_channels=in_channels, corrupted=0, is_training=False, bp_steps=2)
+
+        saver = tf.train.Saver()
+        saver.restore(sess, tf.train.latest_checkpoint(restore_path))
+        tf.local_variables_initializer().run()
+
+        coord = tf.train.Coordinator()
+        threads = tf.train.start_queue_runners(sess=sess, coord=coord)
+
+        identity_list = []
+        transit_list = []
+        path_list = []
+        pose_list = []
+        cell0_h = []
+        cell0_c = []
+        cell1_h = []
+        cell1_c = []
+
+        init0 = []
+        trans0 = []
+        try:
+            while not coord.should_stop():
+                dir, img = sess.run([dirs, imgs])
+                feed_dict = {poke_ae.i0: img, poke_ae.u: np.zeros((1,1,4))}
+
+                # identity, pose, transit, cell = sess.run(
+                #     [poke_ae.identity, poke_ae.pose, poke_ae.transit_series[0], poke_ae.final_cell],
+                #     feed_dict=feed_dict)
+
+                init, trans = sess.run([poke_ae.z, poke_ae.transit_series],
+                                       feed_dict=feed_dict)
+
+                # identity_list.append(identity)
+                # transit_list.append(transit)
+                # path_list.append(dir)
+                # pose_list.append(pose)
+                init0.append(init)
+                trans0.append(trans[0])
+                step+=1
+                print step
+        except tf.errors.OutOfRangeError:
+            print('Done at step %d'%step)
+        finally:
+            # iden_arr = np.concatenate(identity_list, axis=0)
+            # transit_arr = np.concatenate(transit_list, axis=0)
+            # path_arr = np.array(path_list)
+            # np.save(path+'iden_arr.npy', iden_arr)
+            # np.save(path+'tran_arr.npy', transit_arr)
+            # np.save(path+'path_arr.npy', path_arr)
+            # pose_arr = np.concatenate(pose_list, axis=0)
+            # np.save(path+'pose_arr.npy', pose_arr)
+            # c0h = np.concatenate(cell0_h, axis=0)
+            # np.save(path+'c0h.npy', c0h)
+            # c0c = np.concatenate(cell0_c, axis=0)
+            # np.save(path+'c0c.npy', c0c)
+            # c1h = np.concatenate(cell1_h, axis=0)
+            # np.save(path+'c1h.npy', c1h)
+            # c1c = np.concatenate(cell1_c, axis=0)
+            # np.save(path+'c1c.npy', c1c)
+            # print iden_arr.shape
+            # print transit_arr.shape
+            # print path_arr.shape
+            init_arr = np.concatenate(init0, axis=0)
+            np.save(path+'init_arr.npy', init_arr)
+            trans_arr = np.concatenate(trans0, axis=0)
+            np.save(path+'trans_arr.npy', trans_arr)
             coord.request_stop()
             coord.join(threads)
 
@@ -226,4 +324,5 @@ def tsne_embedding():
 
 if __name__ == '__main__':
     #get_embeddings()
-    tsne_embedding()
+    get_multi_embeddings()
+    #tsne_embedding()

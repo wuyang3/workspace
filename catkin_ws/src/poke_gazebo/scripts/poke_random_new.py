@@ -145,7 +145,7 @@ class PokeRandomNew(object):
 
     def move_to_start(self):
         self.pub_controller1.publish(self._hover_distance)
-        rospy.sleep(0.5)
+        rospy.sleep(1.5)
         resp = self._get_model_srv('block', 'world')
         position = resp.pose.position
         position = self.world_to_joint(position)
@@ -375,7 +375,7 @@ def train_set():
 
 def test_set():
     hover_distance = 0.38
-    k = 0
+    k = 21
     path = '/home/wuyang/workspace/python/poke/test_trans/run_%02d/'%k
     if not os.path.exists(path):
         os.makedirs(path)
@@ -389,7 +389,7 @@ def test_set():
     rospy.sleep(2.0)
     poke_random.move_to_start()
 
-    while not rospy.is_shutdown() and k < 10:
+    while not rospy.is_shutdown():
         if i > 100:
             delete_gazebo_models()
             #delete_gazebo_table()

@@ -101,13 +101,13 @@ def main():
 
 def ae_rnn_train():
     shuffle = True
-    num_epochs = 6
+    num_epochs = 8
     batch_size = 16
     num_threads = 4
     min_after_dequeue = 128
 
     type_img = 1 #1\0
-    split_size = 512
+    split_size = 128
     in_channels = 3 #3\1
     corrupted = 0 #1\0
 
@@ -117,11 +117,14 @@ def ae_rnn_train():
     images_1, images_2, images_3, u1s, u2s = batch_images_actions_ae_rnn(
         input_queue, batch_size, num_threads, min_after_dequeue, type_img=type_img,
         normalized=0)
+    # Input images of all previous results are not normalized which is good.
+    # previous normalizing range is wrong because last layer of decoder is relu,
+    # the correct range should be 0-1.
 
     # Initial training parameters.
     learning_rate = 0.0003
     epsilon = 1e-05
-    step = 79810
+    step = 0
 
     with tf.Session() as sess:
         #poke_ae = PokeAERNN(learning_rate, epsilon, batch_size, split_size,
@@ -135,8 +138,8 @@ def ae_rnn_train():
         saver = tf.train.Saver(max_to_keep=2)
         train_writer = tf.summary.FileWriter('../logs/pokeAERNN_new/', sess.graph)
 
-        saver.restore(sess, tf.train.latest_checkpoint('../logs/pokeAERNN_new/lstm_vae_8/'))
-        #tf.global_variables_initializer().run()
+        #saver.restore(sess, tf.train.latest_checkpoint('../logs/pokeAERNN_new/lstm_vae_8/'))
+        tf.global_variables_initializer().run()
         tf.local_variables_initializer().run()
 
         coord = tf.train.Coordinator()

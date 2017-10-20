@@ -67,6 +67,7 @@ class poke_action_generation(object):
                             random.uniform(-self.cube_l/2, self.cube_l/2),
                             random.uniform(7*math.pi/4, 9*math.pi/4)]]
             side = random.choice([0, 1, 2, 3])
+            #side = 1
             poke_chosen = poke_option[side]
             poke_temp.point.x = poke_chosen[0]
             poke_temp.point.y = poke_chosen[1]

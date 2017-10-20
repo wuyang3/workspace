@@ -19,6 +19,11 @@ from poke_bn_vae import PokeBnVAE
 
 from poke_ae_rnn import PokeAERNN, PokeVAERNN, PokeAEFFRNN, PokeVAERNNC
 from poke_ae_rnn_multi import PokeMultiRNN # inheritate from PokeVAERNN.
+from poke_rnn_multi_new import PokeMultiNew # inheritate same. self.pose used for sampling.
+
+from poke_ae_stp import PokeAESTP_py
+from poke_ae_cdna import PokeCDNA_py
+
 
 win_width = 10
 win_height = 10
@@ -141,7 +146,7 @@ def read_data_list_rnn_test(data_list, num_epochs, shuffle):
     return input_queue
 
 def batch_images_actions_rnn_test(input_queue, batch_size, num_threads, min_after_dequeue,
-                                  type_img=1, normalized=0):
+                                  type_img=1, normalized=0, ts=64):
     """
     If type_img 1 by default, rgb images. Otherwise depth image.
     Depth image data are actually stored with 16 bit integers.
@@ -159,42 +164,42 @@ def batch_images_actions_rnn_test(input_queue, batch_size, num_threads, min_afte
         image_1 = tf.image.decode_jpeg(image_1_file)
         image_1_float = tf.cast(image_1, tf.float32)
         if normalized:
-            image_1_float=image_1_float/255.0*2.0-1.0
-        image_1_resized = tf.image.resize_images(image_1_float, [64, 64])
-        image_1_resized.set_shape((64, 64, 3))
+            image_1_float=image_1_float/255.0
+        image_1_resized = tf.image.resize_images(image_1_float, [ts, ts])
+        image_1_resized.set_shape((ts, ts, 3))
 
         image_2 = tf.image.decode_jpeg(image_2_file)
         image_2_float = tf.cast(image_2, tf.float32)
         if normalized:
-            image_2_float=image_2_float/255.0*2.0-1.0
+            image_2_float=image_2_float/255.0
         image_2_resized = tf.image.resize_images(image_2_float, [64, 64])
         image_2_resized.set_shape((64, 64, 3))
 
         image_3 = tf.image.decode_jpeg(image_3_file)
         image_3_float = tf.cast(image_3, tf.float32)
         if normalized:
-            image_3_float=image_3_float/255.0*2.0-1.0
+            image_3_float=image_3_float/255.0
         image_3_resized = tf.image.resize_images(image_3_float, [64, 64])
         image_3_resized.set_shape((64, 64, 3))
     else:
         image_1 = tf.image.decode_png(image_1_file, dtype=tf.uint8)
         image_1_float = tf.cast(image_1, tf.float32)
         if normalized:
-            image_1_float=image_1_float/255.0*2.0-1.0
-        image_1_resized = tf.image.resize_images(image_1_float, [64, 64])
-        image_1_resized.set_shape((64, 64, 1))
+            image_1_float=image_1_float/255.0
+        image_1_resized = tf.image.resize_images(image_1_float, [ts, ts])
+        image_1_resized.set_shape((ts, ts, 1))
 
         image_2 = tf.image.decode_png(image_2_file, dtype=tf.uint8)
         image_2_float = tf.cast(image_2, tf.float32)
         if normalized:
-            image_2_float=image_2_float/255.0*2.0-1.0
+            image_2_float=image_2_float/255.0
         image_2_resized = tf.image.resize_images(image_2_float, [64, 64])
         image_2_resized.set_shape((64, 64, 1))
 
         image_3 = tf.image.decode_png(image_3_file, dtype=tf.uint8)
         image_3_float = tf.cast(image_3, tf.float32)
         if normalized:
-            image_3_float=image_3_float/255.0*2.0-1.0
+            image_3_float=image_3_float/255.0
         image_3_resized = tf.image.resize_images(image_3_float, [64, 64])
         image_3_resized.set_shape((64, 64, 1))
 
@@ -224,17 +229,22 @@ def ae_rnn_test():
         '../../poke/test_cube_table_3.txt', num_epochs, shuffle)
     images_1, images_2, images_3, u1s, u2s, p1s, p2s, p3s = batch_images_actions_rnn_test(
         input_queue, batch_size, num_threads, min_after_dequeue,
-        type_img=type_img, normalized=normalized)
+        type_img=type_img, normalized=normalized, ts=240)
 
     step = 0
     with tf.Session() as sess:
         #poke_ae = PokeAERNN(batch_size=batch_size, split_size=512,
         #                    in_channels=3, corrupted=0,
         #                    is_training=False, lstm=1)
-        poke_ae = PokeVAERNN(batch_size=batch_size, split_size=512, in_channels=3, corrupted=0,
-                             is_training=False, lstm=1)
+        # poke_ae = PokeVAERNN(batch_size=batch_size, split_size=512, in_channels=3, corrupted=0,
+        #                      is_training=False, lstm=1)
         #poke_ae = PokeAEFFRNN(batch_size=batch_size, in_channels=3,
         #                      corrupted=0, is_training=False, lstm=1, vae=1)
+
+        # poke_ae = PokeAESTP_py(batch_size=batch_size, in_channels=in_channels, is_training=False,
+        #                        num_masks=6, upsample=1, use_bg=1)
+        poke_ae = PokeCDNA_py(batch_size=batch_size, in_channels=in_channels, is_training=False,
+                              num_masks=4, use_bg=1, adam=1)
 
         saver = tf.train.Saver()
         #restore_path = '../logs/pokeAERNN/rnn_dae(bn)/'
@@ -247,7 +257,10 @@ def ae_rnn_test():
         #restore_path = '../logs/pokeAERNN/ff_lstm_dae(bn)/'
         #restore_path = '../logs/pokeAERNN/ff_lstm_vae/'
 
-        restore_path = '../logs/pokeAERNN_new/lstm_vae_14/'
+        #restore_path = '../logs/pokeAERNN_new/lstm_vae_14/'
+
+        #restore_path = '../logs/pokeAESTP/stp_2/'
+        restore_path = '../logs/pokeAECDNA/pyramid_new_2/'
 
         saver.restore(sess, tf.train.latest_checkpoint(restore_path))
         tf.local_variables_initializer().run()
@@ -277,11 +290,14 @@ def ae_rnn_test():
                              poke_ae.u2: u_feed[0],
                              poke_ae.u3: u_feed[1]}
 
-                imgs_rec, loss_total = sess.run(
-                    [[poke_ae.decoding_1, poke_ae.decoding_2, poke_ae.decoding_3], poke_ae.loss],
+                imgs_rec, loss_total, i1r = sess.run(
+                    [[poke_ae.decoding_1, poke_ae.decoding_2, poke_ae.decoding_3],
+                     poke_ae.loss,
+                     poke_ae.i1r],
                     feed_dict=feed_dict)
 
                 errors = []
+                imgs_feed[0] = i1r
                 for n in range(3):
                     px, py = positions[n][0]
                     mean_error_t, _, _ = poke_ae.patch_average_error(
@@ -292,15 +308,16 @@ def ae_rnn_test():
                 title = ' '.join(title_l)
 
                 plot_multisample(imgs_feed, imgs_rec, actions_plot, positions_plot, title)
-                #plt.pause(0.5)
-                #plt.waitforbuttonpress()
-                plt.savefig(path+'rnn%d.png'%step, format='png', dpi=600)
+                plt.pause(0.5)
+                plt.waitforbuttonpress()
+                #plt.savefig(path+'rnn%d.png'%step, format='png', dpi=600)
                 plt.close()
 
                 #with open(path+'error_rnn_offline.dat', 'ab') as f:
-                #    np.savetxt(f, np.array([errors]))
+                #   np.savetxt(f, np.array([errors]))
 
                 step+=1
+                print 'step %d'%step
             train_writer.close()
         except tf.errors.OutOfRangeError:
             print('Done queuing: epoch limit reached.')
@@ -543,7 +560,8 @@ def read_data_list_multi_test(data_list, num_epochs, shuffle, bp_steps):
     return input_queue
 
 def batch_images_actions_multi_test(input_queue, batch_size, num_threads, min_after_dequeue,
-                                    bp_steps, target_size=64, type_img=1, normalized=0):
+                                    bp_steps, target_size=64, type_img=1,
+                                    normalized=0, zero_action=1):
     path = input_queue[0] # bp_steps
     action = input_queue[1] # bp_steps-1 x 4
     position = input_queue[2] # 2 x 4
@@ -553,7 +571,8 @@ def batch_images_actions_multi_test(input_queue, batch_size, num_threads, min_af
     assert shape0[0]==shape1[0]+1==bp_steps, (
         'Truncated time steps not matching'
     )
-    action_full = tf.concat([tf.zeros([1, 4]), action], axis=0) # [5, 4] -> [6, 4]
+    if zero_action:
+        action = tf.concat([tf.zeros([1, 4]), action], axis=0) # [5, 4] -> [6, 4]
 
     image_list = []
 
@@ -564,20 +583,20 @@ def batch_images_actions_multi_test(input_queue, batch_size, num_threads, min_af
             img = tf.image.decode_jpeg(img_file)
             img_float = tf.cast(img, tf.float32)
             if normalized:
-                img_float = img_float/255.0*2.0-1.0
+                img_float = img_float/255.0#*2.0-1.0
             img_resized = tf.image.resize_images(img_float, [target_size, target_size])
             img_resized.set_shape((target_size, target_size, 3))
         else:
             img = tf.image.decode_png(img_file, dtype=tf.uint8)
             img_float = tf.cast(img, tf.float32)
             if normalized:
-                img_float = img_float/255.0*2.0-1.0
+                img_float = img_float/255.0#*2.0-1.0
             img_resized = tf.image_resize_images(img_float, [target_size, target_size])
             img_resized.set_shape((target_size, target_size, 3))
         image_list.append(img_resized)
     image_stack = tf.stack(image_list, axis=0) #-> [bp_steps, target_size, target_size, 3 or 1]
 
-    images, actions, positions = tf.train.batch([image_stack, action_full, position],
+    images, actions, positions = tf.train.batch([image_stack, action, position],
                                      batch_size,
                                      num_threads,
                                      capacity=min_after_dequeue+3*batch_size)
@@ -585,6 +604,16 @@ def batch_images_actions_multi_test(input_queue, batch_size, num_threads, min_af
     return output
 
 def ae_rnn_multi_test(bp_steps):
+    """
+    working trained model of PokeMultiRNN and PokeMultiNew are trained on non normalized data.
+    For PokeMultiRNN, old code normalize data into (-1, 1) but it is never used.
+    For PokeMultiNew, new code normalize data into (0, 1) used.
+    Since we are not normalizing anyway, this difference does not really matter.
+
+    pokeAERNN: old dataset with one background.
+    pokeAERNN_new: new dataset
+    new in pokeAERNN_new: new model where first encoding is directly used for sampling.
+    """
     shuffle = True
     num_epochs = 1
     batch_size = 1
@@ -592,6 +621,11 @@ def ae_rnn_multi_test(bp_steps):
     min_after_dequeue = 16
 
     type_img = 1
+    zero_action = 0
+    if zero_action:
+        u_start=1
+    else:
+        u_start=0
 
     path = '/home/wuyang/workspace/python/poke/test_data/'
 
@@ -599,18 +633,23 @@ def ae_rnn_multi_test(bp_steps):
         '../../poke/test_multi_cube_table_6.txt', num_epochs, shuffle, bp_steps)
     images, actions, positions = batch_images_actions_multi_test(
         input_queue, batch_size, num_threads, min_after_dequeue, bp_steps, target_size=64,
-        type_img=type_img, normalized=0)
+        type_img=type_img, normalized=0, zero_action=zero_action)
 
     step = 0
     with tf.Session() as sess:
-        poke_ae = PokeMultiRNN(batch_size=batch_size, split_size=512,
+        #poke_ae = PokeMultiRNN(batch_size=batch_size, split_size=128,
+        #                       in_channels=3, corrupted=0,
+        #                       is_training=False, bp_steps=bp_steps)
+
+        poke_ae = PokeMultiNew(batch_size=batch_size, split_size=128,
                                in_channels=3, corrupted=0,
                                is_training=False, bp_steps=bp_steps)
 
         saver = tf.train.Saver(max_to_keep=2)
 
         #restore_path = '../logs/pokeAERNN/6_lstm_vae_8ep/'
-        restore_path = '../logs/pokeAERNN_new/6_lstm_vae_12/'
+        #restore_path = '../logs/pokeAERNN_new/6_lstm_vae_little/'
+        restore_path = '../logs/pokeAERNN_new/new_6_lstm_vae_little/'
         saver.restore(sess, tf.train.latest_checkpoint(restore_path))
         tf.local_variables_initializer().run()
 
@@ -630,7 +669,7 @@ def ae_rnn_multi_test(bp_steps):
 
                 actions_plot = [] # bp_steps-1 actions from 1xbp_stepsx4.
                 # four zeros at u_feed[0][0]
-                for row in u_feed[0][1:]:
+                for row in u_feed[0][u_start:]:
                     temp_list = [row[0]*64.0, row[1]*64.0, row[2]*np.pi*2, row[3]*0.04+0.04]
                     actions_plot.append(temp_list)
 
@@ -672,8 +711,8 @@ def ae_rnn_multi_test(bp_steps):
 
 
 if __name__ == '__main__':
-    #ae_rnn_test()
+    ae_rnn_test()
     #ae_rnn_multi_test(6)
 
-    ae_rnn_sample()
+    #ae_rnn_sample()
     #ae_rnn_sanity_check()

@@ -148,6 +148,7 @@ def group_box_plot(list_of_path):
     plt.close()
 
 if __name__ == '__main__':
+    # get single box plot.
     path0 = '/home/wuyang/workspace/python/poke/test_data/offline/'
     path_list = [
         'sanity_check/',
@@ -168,13 +169,17 @@ if __name__ == '__main__':
     # box_plot(path0+path_list[7])
     # box_plot(path0+path_list[8])
     # box_plot(path0+path_list[9])
-    #box_plot(path0+path_list[11])
+    # box_plot(path0+path_list[11])
+    # box_plot('/home/wuyang/workspace/python/poke/test_data/')
 
+    # get group box plots.
     #group_box_plot([path0+item for item in path_list[:5]])
+    # group_box_plot(['/home/wuyang/workspace/python/poke/test_data/', '/home/wuyang/workspace/python/poke/test_data/offline/lstm_vae/'])
 
     paths = ['run_rnn_dae(bn),tag_loss_rec.csv', 'run_lstm_dae(bn),tag_loss_rec.csv',
              'run_rnn_vae,tag_loss_loss_vae.csv', 'run_lstm_vae,tag_loss_loss_vae.csv']
     paths = ['test_data/misc/'+item for item in paths]
     labels = ['rnn dae', 'lstm dae', 'rnn vae', 'lstm vae']
 
+    # get loss plot.
     #get_loss(paths[2:], labels[2:])
